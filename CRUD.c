@@ -11,7 +11,7 @@ struct User {
     int age;
 };
 
-int userExists(int userId) {
+int isUserExists(int userId) {
     FILE *userFile = fopen(USER_FILE, "r");
     if (userFile == NULL) return 0;
 
@@ -37,7 +37,7 @@ void addUser() {
     printf("Enter ID: ");
     scanf("%d", &newUser.id);
 
-    if (userExists(newUser.id)) {
+    if (isUserExists(newUser.id)) {
         printf("Error: A user with this ID already exists.\n");
         fclose(userFile);
         return;
