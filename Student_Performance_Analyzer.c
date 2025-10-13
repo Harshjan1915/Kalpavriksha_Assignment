@@ -23,9 +23,15 @@ struct Student {
 
 int readStudents(struct Student *students, int studentcount) {
     for (int i = 0; i < studentcount; i++) {
-        if (scanf("%d", &students[i].rollNumber) != 1) return -1;
-        if (scanf("%19s", students[i].name) != 1) return -1;
-        if (scanf("%f %f %f", &students[i].mark1, &students[i].mark2, &students[i].mark3) != 3) return -1;
+        if (scanf("%d", &students[i].rollNumber) != 1){
+             return -1;
+        }
+        if (scanf("%19s", students[i].name) != 1) {
+            return -1;
+        }
+        if (scanf("%f %f %f", &students[i].mark1, &students[i].mark2, &students[i].mark3) != 3) {
+            return -1;
+        }
 
         if (students[i].mark1 < MIN_MARK || students[i].mark1 > MAX_MARK ||
             students[i].mark2 < MIN_MARK || students[i].mark2 > MAX_MARK ||
@@ -42,11 +48,21 @@ void computeResults(struct Student *students, int studentcount) {
         students[i].total = students[i].mark1 + students[i].mark2 + students[i].mark3;
         students[i].average = students[i].total / 3.0f;
 
-        if (students[i].average >= GRADE_A) students[i].grade = 'A';
-        else if (students[i].average >= GRADE_B) students[i].grade = 'B';
-        else if (students[i].average >= GRADE_C) students[i].grade = 'C';
-        else if (students[i].average >= GRADE_D) students[i].grade = 'D';
-        else students[i].grade = 'F';
+        if (students[i].average >= GRADE_A){ 
+            students[i].grade = 'A';
+        }
+        else if (students[i].average >= GRADE_B) {
+            students[i].grade = 'B';
+        }
+        else if (students[i].average >= GRADE_C) {
+            students[i].grade = 'C';
+        }
+        else if (students[i].average >= GRADE_D) {
+            students[i].grade = 'D';
+        }
+        else {
+            students[i].grade = 'F';
+        }
     }
 }
 
@@ -83,7 +99,9 @@ void printReports(struct Student *students, int studentcount) {
 }
 
 void printRollNumbers(struct Student *students, int index, int studentcount) {
-    if (index >= studentcount) return;
+    if (index >= studentcount){
+     return;
+    }
     printf("%d ", students[index].rollNumber);
     printRollNumbers(students, index + 1, studentcount);
 }
