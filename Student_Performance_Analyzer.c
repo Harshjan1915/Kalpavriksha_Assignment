@@ -21,8 +21,8 @@ struct Student {
     float average;
 };
 
-int readStudents(struct Student *students, int n) {
-    for (int i = 0; i < n; i++) {
+int readStudents(struct Student *students, int studentcount) {
+    for (int i = 0; i < studentcount; i++) {
         if (scanf("%d", &students[i].rollNumber) != 1) return -1;
         if (scanf("%19s", students[i].name) != 1) return -1;
         if (scanf("%f %f %f", &students[i].mark1, &students[i].mark2, &students[i].mark3) != 3) return -1;
@@ -37,8 +37,8 @@ int readStudents(struct Student *students, int n) {
     return 0;
 }
 
-void computeResults(struct Student *students, int n) {
-    for (int i = 0; i < n; i++) {
+void computeResults(struct Student *students, int studentcount) {
+    for (int i = 0; i < studentcount; i++) {
         students[i].total = students[i].mark1 + students[i].mark2 + students[i].mark3;
         students[i].average = students[i].total / 3.0f;
 
@@ -59,20 +59,21 @@ void printPerformanceStars(char grade) {
         case 'D': stars = 2; break;
         default: stars = 0;
     }
-    for (int i = 0; i < stars; i++) putchar('*');
-    putchar('\n');
+    for (int i = 0; i < stars; i++){
+        printf("*");
+    }
+    printf("\n");
 }
 
-void printReports(struct Student *students, int n) {
-    for (int i = 0; i < n; i++) {
-        printf("Roll: %d\n", students[i].rollNumber);
+void printReports(struct Student *students, int studentcount) {
+    for (int i = 0; i < studentcount; i++) {
+        printf("\nRoll: %d\n", students[i].rollNumber);
         printf("Name: %s\n", students[i].name);
         printf("Total: %.0f\n", students[i].total);
         printf("Average: %.2f\n", students[i].average);
         printf("Grade: %c\n", students[i].grade);
 
         if (students[i].grade == 'F') {
-            printf("Performance:\n");
             continue;
         }
 
@@ -81,42 +82,42 @@ void printReports(struct Student *students, int n) {
     }
 }
 
-void printRollNumbers(struct Student *students, int index, int n) {
-    if (index >= n) return;
+void printRollNumbers(struct Student *students, int index, int studentcount) {
+    if (index >= studentcount) return;
     printf("%d ", students[index].rollNumber);
-    printRollNumbers(students, index + 1, n);
+    printRollNumbers(students, index + 1, studentcount);
 }
 
-int main(void) {
-    int n;
-    if (scanf("%d", &n) != 1) {
+int main() {
+    int studentcount;
+    if (scanf("%d", &studentcount) != 1) {
         fprintf(stderr, "Error: invalid number of students\n");
         return 1;
     }
-    if (n <= 0) {
+    if (studentcount <= 0) {
         fprintf(stderr, "Error: number of students must be positive\n");
         return 1;
     }
 
-    struct Student *students = malloc(sizeof(struct Student) * n);
+    struct Student *students = malloc(sizeof(struct Student) * studentcount);
     if (students == NULL) {
         fprintf(stderr, "Memory allocation failed\n");
         return 1;
     }
 
-    int rc = readStudents(students, n);
-    if (rc != 0) {
+    int readStatus = readStudents(students, studentcount);
+    if (readStatus != 0) {
         free(students);
         return 1;
     }
 
-    computeResults(students, n);
+    computeResults(students, studentcount);
 
+    
+    printReports(students, studentcount);
     printf("\n");
-    printReports(students, n);
-
     printf("List of Roll Numbers (via recursion): ");
-    printRollNumbers(students, 0, n);
+    printRollNumbers(students, 0, studentcount);
     printf("\n");
 
     free(students);
