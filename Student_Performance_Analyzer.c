@@ -69,11 +69,20 @@ void computeResults(struct Student *students, int studentcount) {
 void printPerformanceStars(char grade) {
     int stars = 0;
     switch (grade) {
-        case 'A': stars = 5; break;
-        case 'B': stars = 4; break;
-        case 'C': stars = 3; break;
-        case 'D': stars = 2; break;
-        default: stars = 0;
+        case 'A': 
+            stars = 5; 
+            break;
+        case 'B': 
+            stars = 4; 
+            break;
+        case 'C': 
+            stars = 3; 
+            break;
+        case 'D': 
+            stars = 2; 
+            break;
+        default: 
+            stars = 0;
     }
     for (int i = 0; i < stars; i++){
         printf("*");
