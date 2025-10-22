@@ -4,65 +4,63 @@
 
 #define MAX_VALUE 255
 
-void generateMatrix(int **matrix, int n) {
+void generateMatrix(int **matrix, int size) {
     srand(time(NULL));
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            *(*(matrix + i) + j) = rand() % (MAX_VALUE + 1);
+    for (int row = 0; row < size; row++) {
+        for (int column = 0; column < size; column++) {
+            *(*(matrix + row) + column) = rand() % (MAX_VALUE + 1);
         }
     }
 }
 
-void printMatrix(int **matrix, int n) {
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            printf("%4d", *(*(matrix + i) + j));
+void printMatrix(int **matrix, int size) {
+    for (int row = 0; row < size; row++) {
+        for (int column = 0; column < size; column++) {
+            printf("%4d", *(*(matrix + row) + column));
         }
         printf("\n");
     }
 }
-
-void rotateMatrixClockwise(int **matrix, int n) {
-    // Transpose the matrix
-    for (int i = 0; i < n; i++) {
-        for (int j = i + 1; j < n; j++) {
-            int temp = *(*(matrix + i) + j);
-            *(*(matrix + i) + j) = *(*(matrix + j) + i);
-            *(*(matrix + j) + i) = temp;
-        }
-    }
-
-    // Reverse each row
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n / 2; j++) {
-            int temp = *(*(matrix + i) + j);
-            *(*(matrix + i) + j) = *(*(matrix + i) + (n - j - 1));
-            *(*(matrix + i) + (n - j - 1)) = temp;
+void transposeMatrix(int **matrix, int size) {
+    for (int row = 0; row < size; row++) {
+        for (int column = row + 1; column < size; column++) {
+            int temp = *(*(matrix + row) + column);
+            *(*(matrix + row) + column) = *(*(matrix + column) + row);
+            *(*(matrix + column) + row) = temp;
         }
     }
 }
 
-void applySmoothingFilter(int **matrix, int n) {
-    int *tempRow = malloc(n * sizeof(int));  
+void reverseRows(int **matrix, int size) {
+    for (int row = 0; row < size; row++) {
+        for (int column = 0; column < size / 2; column++) {
+            int temp = *(*(matrix + row) + column);
+            *(*(matrix + row) + column) = *(*(matrix + row) + (size - column - 1));
+            *(*(matrix + row) + (size - column - 1)) = temp;
+        }
+    }
+}
+void applySmoothingFilter(int **matrix, int size) {
+    int *tempRow = malloc(size * sizeof(int));
 
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
+    for (int row = 0; row < size; row++) {
+        for (int column = 0; column < size; column++) {
             int sum = 0, count = 0;
 
-            for (int x = i - 1; x <= i + 1; x++) {
-                for (int y = j - 1; y <= j + 1; y++) {
-                    if (x >= 0 && x < n && y >= 0 && y < n) {
+            for (int x = row - 1; x <= row + 1; x++) {
+                for (int y = column - 1; y <= column + 1; y++) {
+                    if (x >= 0 && x < size && y >= 0 && y < size) {
                         sum += *(*(matrix + x) + y);
                         count++;
                     }
                 }
             }
 
-            *(tempRow + j) = sum / count;
+            *(tempRow + column) = sum / count;
         }
 
-        for (int j = 0; j < n; j++) {
-            *(*(matrix + i) + j) = *(tempRow + j);
+        for (int column = 0; column < size; column++) {
+            *(*(matrix + row) + column) = *(tempRow + column);
         }
     }
 
@@ -70,33 +68,36 @@ void applySmoothingFilter(int **matrix, int n) {
 }
 
 int main() {
-    int n;
+    int size;
     printf("Enter matrix size (2-10): ");
-    scanf("%d", &n);
+    scanf("%d", &size);
 
-    if (n < 2 || n > 10) {
+    if (size < 2 || size > 10) {
         printf("Invalid matrix size.\n");
         return 0;
     }
 
-    int **matrix = malloc(n * sizeof(int*));
-    for (int i = 0; i < n; i++)
-        *(matrix + i) = malloc(n * sizeof(int));
+    int **matrix = malloc(size * sizeof(int*));
+    for (int row = 0; row < size; row++){
+        *(matrix + row) = malloc(size * sizeof(int));
+    }
 
     printf("\nOriginal Randomly Generated Matrix:\n");
-    generateMatrix(matrix, n);
-    printMatrix(matrix, n);
+    generateMatrix(matrix, size);
+    printMatrix(matrix, size);
 
     printf("\nMatrix after 90° Clockwise Rotation:\n");
-    rotateMatrixClockwise(matrix, n);
-    printMatrix(matrix, n);
+    transposeMatrix(matrix, size);
+    reverseRows(matrix, size);
+    printMatrix(matrix, size);
 
     printf("\nMatrix after Applying 3x3 Smoothing Filter:\n");
-    applySmoothingFilter(matrix, n);
-    printMatrix(matrix, n);
+    applySmoothingFilter(matrix, size);
+    printMatrix(matrix, size);
 
-    for (int i = 0; i < n; i++)
-        free(*(matrix + i));
+    for (int row = 0; row < size; row++) {
+        free(*(matrix + row));
+    }
     free(matrix);
 
     return 0;
