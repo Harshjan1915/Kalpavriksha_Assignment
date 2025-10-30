@@ -9,19 +9,23 @@ struct Product {
     int quantity;
 };
 
+void inputProductDetails(struct Product *product) {
+    printf("Enter Product ID: ");
+    scanf("%d", &product->id);
+    printf("Enter Product Name: ");
+    scanf("%s", product->name);
+    printf("Enter Product Price: ");
+    scanf("%f", &product->price);
+    printf("Enter Product Quantity: ");
+    scanf("%d", &product->quantity);
+}
+
 void addNewProduct(struct Product *products, int *size){
     *size += 1;
     products = realloc(products, (*size) * sizeof(struct Product));
     
     printf("Enter new product details:\n");
-    printf("Enter Product ID: ");
-    scanf("%d", &products[*size - 1].id);
-    printf("Enter Product Name: ");
-    scanf("%s", products[*size - 1].name);
-    printf("Enter Product Price: ");
-    scanf("%f", &products[*size - 1].price);
-    printf("Enter Product Quantity: ");
-    scanf("%d", &products[*size - 1].quantity);
+    inputProductDetails(&products[*size - 1]);
     printf("Product added successfully!\n");
 }
 
@@ -53,13 +57,13 @@ void updateProductQuantity(struct Product *products, int size){
     
 }
 
-void searchProductByID(struct Product *products, int size){
+int searchProductByID(struct Product *products, int size){
     int id;
     printf("Enter Product ID to search: ");
     scanf("%d", &id);
     for(int i=0;i<size;i++){
         if(products[i].id == id){
-            printf("Product found: Product ID: %d | Name: %s | Price: %.2f | Quantity: %d\n", products[i].id, products[i].name, products[i].price, products[i].quantity);
+            displayProductDetails(&products[i]);
             return;
         }
     }
@@ -72,7 +76,8 @@ void searchProductByName(struct Product *products, int size){
     scanf("%s", name);
     for(int i=0;i<size;i++){
         if(strstr(products[i].name, name) != NULL){
-            printf("Product found:\n Product ID: %d | Name: %s | Price: %.2f | Quantity: %d\n", products[i].id, products[i].name, products[i].price, products[i].quantity);
+            displayProductDetails(&products[i]);
+            return;
         }
     }
 }
@@ -86,7 +91,7 @@ void searchProductsByPriceRange(struct Product *products, int size){
     printf("Products in price range:\n");
     for(int i=0;i<size;i++){
         if(products[i].price >= minPrice && products[i].price <= maxPrice){
-            printf("Product ID: %d | Name: %s | Price: %.2f | Quantity: %d\n", products[i].id, products[i].name, products[i].price, products[i].quantity);
+            displayProductDetails(&products[i]);
         }
     }
 }
@@ -113,6 +118,10 @@ void deleteProductByID(struct Product *products, int *size){
     
 }
 
+void displayProductDetails(struct Product *product){
+    printf("Product ID: %d | Name: %s | Price: %.2f | Quantity: %d\n", product->id, product->name, product->price, product->quantity);
+}
+
 
 int main(){
     int numProducts, choice;
@@ -120,16 +129,9 @@ int main(){
     scanf("%d", &numProducts);
     struct Product *products= calloc(numProducts, sizeof(struct Product));
 
-    for(int i=0;i<numProducts;i++){
-        printf("Enter details for product %d:\n", i+1);
-        printf("Product ID: ");
-        scanf("%d", &products[i].id);
-        printf("Product Name: ");
-        scanf("%s", products[i].name);
-        printf("Product Price: ");
-        scanf("%f", &products[i].price);
-        printf("Product Quantity: ");
-        scanf("%d", &products[i].quantity);
+    for(int i = 0; i < numProducts; i++){
+        printf("Enter details for product %d:\n", i + 1);
+        inputProductDetails(&products[i]);
         printf("\n");
     }
 
