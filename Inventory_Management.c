@@ -19,6 +19,9 @@ void inputProductDetails(struct Product *product) {
     printf("Enter Product Quantity: ");
     scanf("%d", &product->quantity);
 }
+void displayProductDetails(struct Product *product){
+    printf("Product ID: %d | Name: %s | Price: %.2f | Quantity: %d\n", product->id, product->name, product->price, product->quantity);
+}
 
 void addNewProduct(struct Product *products, int *size){
     *size += 1;
@@ -38,36 +41,33 @@ void viewAllProducts(struct Product *products, int size){
 }
 
 void updateProductQuantity(struct Product *products, int size){
-    int id,newQuantity,found=0;
+    int id,newQuantity;
     printf("Enter Product ID to update quantity: ");
     scanf("%d", &id);
     printf("Enter new Quantity: ");
     scanf("%d", &newQuantity);
     for(int i=0;i<size;i++){
         if(products[i].id == id){
-            found=1;
             products[i].quantity = newQuantity;
             printf("Quantity updated successfully!\n");
             return;
         }
     }
-    if(!found){
-        printf("Product with ID %d not found.\n", id);
-    }
+    
     
 }
 
-int searchProductByID(struct Product *products, int size){
-    int id;
-    printf("Enter Product ID to search: ");
-    scanf("%d", &id);
+struct Product * searchProductByID(struct Product *products, int size, int id){
+    if(id==0){
+        printf("Enter Product ID to search: ");
+        scanf("%d", &id);
+    }
     for(int i=0;i<size;i++){
         if(products[i].id == id){
-            displayProductDetails(&products[i]);
-            return;
+            return &products[i];
         }
     }
-    printf("Product with ID %d not found.\n", id);
+    return NULL;
 }
 
 void searchProductByName(struct Product *products, int size){
@@ -97,29 +97,20 @@ void searchProductsByPriceRange(struct Product *products, int size){
 }
 
 void deleteProductByID(struct Product *products, int *size){
-    int id, found=0;
+    int id;
     printf("Enter Product ID to delete: ");
     scanf("%d", &id);
-    for(int i=0;i<*size;i++){
-        if(products[i].id == id){
-            found=1;
-            for(int j=i;j<*size-1;j++){
-                products[j] = products[j+1];
-            }
-            *size -= 1;
-            products = realloc(products, (*size) * sizeof(struct Product));
-            printf("Product deleted successfully!\n");
-            break;
+    struct Product *product = searchProductByID(products, *size, id);
+    if(product!= NULL){
+        int index = product - products;
+        for(int i=index;i<*size-1;i++){
+            products[i] = products[i+1];
         }
-    }
-    if(!found){
-        printf("Product with ID %d not found.\n", id);
+        *size -= 1;
+        products = realloc(products, (*size) * sizeof(struct Product));
+        printf("Product deleted successfully!\n");
     }
     
-}
-
-void displayProductDetails(struct Product *product){
-    printf("Product ID: %d | Name: %s | Price: %.2f | Quantity: %d\n", product->id, product->name, product->price, product->quantity);
 }
 
 
@@ -159,7 +150,8 @@ int main(){
                 updateProductQuantity(products, numProducts);
                 break;
             case 4:
-                searchProductByID(products, numProducts);
+                products=searchProductByID(products, numProducts, 0);
+                displayProductDetails(products);
                 break;
             case 5:
                 searchProductByName(products, numProducts);
