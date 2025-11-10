@@ -24,7 +24,21 @@ struct fileNode{
 
 void createDirectoryOrFile(struct fileNode* cwd, int isFolder){
     struct fileNode* newNode = (struct fileNode*)malloc(sizeof(struct fileNode));
-    scanf("%s", newNode->name);
+    char FileorDirName[50];
+    scanf("%s", FileorDirName);
+    strcpy(newNode->name, FileorDirName);
+    struct fileNode* head1 = cwd->child;
+    struct fileNode* temp1 = head1;
+    if(head1 != NULL){
+    do{
+        if(strcmp(temp1->name,FileorDirName)==0){
+            printf("File or Directory with name '%s' already exists.\n",FileorDirName);
+            free(newNode);
+            return;
+        }
+        temp1=temp1->next;
+    }while(temp1!=head1);
+    }
     newNode->isFolder = isFolder;
     newNode->parent = cwd;
     newNode->child = NULL;
@@ -62,12 +76,17 @@ void writeFile(struct fileNode* cwd, char virtualDisk[NUM_BLOCKS][BLOCK_SIZE], s
     int blockCount = 0;
     struct freeBlock* block = *freeListHead;
 
+    char data[BLOCK_SIZE];
+    while(getchar()!= '"');
+    scanf("%[^\"]", data);
+    getchar();
+
+    if(head==NULL){
+        printf("No files to write. Create a file first.\n");
+        return;
+    }
     do{
         if(strcmp(temp->name, fileName) == 0 && temp->isFolder == 0){
-            char data[BLOCK_SIZE];
-            while(getchar()!= '"');
-            scanf("%[^\"]", data);
-            getchar();
 
             blockCount = strlen(data)/BLOCK_SIZE + 1;
 
@@ -85,6 +104,7 @@ void writeFile(struct fileNode* cwd, char virtualDisk[NUM_BLOCKS][BLOCK_SIZE], s
         temp = temp->next;
     }
     while(temp != head);
+    printf("File '%s' not found.\n", fileName);
 }
 
 void readFile(struct fileNode* cwd, char virtualDisk[NUM_BLOCKS][BLOCK_SIZE]){
@@ -92,6 +112,10 @@ void readFile(struct fileNode* cwd, char virtualDisk[NUM_BLOCKS][BLOCK_SIZE]){
     scanf(" %s", fileName);
     struct fileNode* head = cwd->child;
     struct fileNode* temp = head;
+    if(head==NULL){
+        printf("No files to read.\n");
+        return;
+    }
     do{
         if(strcmp(temp->name, fileName) == 0 && temp->isFolder == 0){
             int size = temp->fileSize;
@@ -105,6 +129,7 @@ void readFile(struct fileNode* cwd, char virtualDisk[NUM_BLOCKS][BLOCK_SIZE]){
         temp = temp->next;
     }
     while(temp != head);
+    printf("File '%s' not found.\n", fileName);
 }
 
 void deleteFile(struct fileNode* cwd, char virtualDisk[NUM_BLOCKS][BLOCK_SIZE], struct freeBlock** freeListTail){
@@ -143,9 +168,14 @@ void deleteFile(struct fileNode* cwd, char virtualDisk[NUM_BLOCKS][BLOCK_SIZE], 
             printf("File '%s' deleted successfully.\n", fileName);
             return;
         }
+        if(strcmp(temp->name, fileName) == 0 && temp->isFolder == 1){
+            printf("'%s' is a directory. Use rmdir to delete directories.\n", fileName);
+            return;
+        }
         temp = temp->next;
     }
     while(temp != head);
+    printf("File '%s' not found.\n", fileName);
 }
 
 void removeDirectory(struct fileNode* cwd){
@@ -153,6 +183,10 @@ void removeDirectory(struct fileNode* cwd){
     scanf(" %s", dirName);
     struct fileNode* head = cwd->child;
     struct fileNode* temp = head;
+    if(head==NULL){
+        printf("No directories to remove.\n");
+        return;
+    }
     do{
         if(strcmp(temp->name, dirName) == 0 && temp->isFolder == 1){
             if(temp->child != NULL){
@@ -178,9 +212,15 @@ void removeDirectory(struct fileNode* cwd){
             printf("Directory '%s' deleted successfully.\n", dirName);
             return;
         }
+        if(strcmp(temp->name, dirName) == 0 && temp->isFolder == 0){
+            printf("'%s' is a file. Use delete to remove files.\n", dirName);
+            return;
+        }
         temp = temp->next;
     }
     while(temp != head);
+
+    printf("Directory '%s' not found.\n", dirName);
 }
 
 void changeDirectory(struct fileNode** cwd){
@@ -243,7 +283,7 @@ void listDirectory(struct fileNode* cwd){
     struct fileNode* head = cwd->child;
     struct fileNode* temp = head;
     do {
-        printf("%s/ ", temp->name);
+        printf("%s/ \n", temp->name);
         temp = temp->next;
     } while (temp != head);
     printf("\n");
@@ -305,7 +345,7 @@ int main(){
     while(1){
         printf("%s> ", cwd->name);
         char command[100];
-        scanf("%s", command);
+        scanf(" %s", command);
         if(strcmp(command, "mkdir") == 0){
             createDirectoryOrFile(cwd, 1);
         }
