@@ -5,30 +5,30 @@
 #define BLOCK_SIZE 512
 #define NUM_BLOCKS 1024
 
-struct freeBlock{
+struct FreeBlock{
     int index;
-    struct freeBlock* next;
-    struct freeBlock* prev;
+    struct FreeBlock* next;
+    struct FreeBlock* prev;
 };
 
-struct fileNode{
+struct FileNode{
     char name[50];
     int isFolder;
-    struct fileNode* parent;
-    struct fileNode* child;
-    struct fileNode* next;
-    struct fileNode* prev;
+    struct FileNode* parent;
+    struct FileNode* child;
+    struct FileNode* next;
+    struct FileNode* prev;
     int blockPointers[20];
     int fileSize;
 };
 
-void createDirectoryOrFile(struct fileNode* cwd, int isFolder){
-    struct fileNode* newNode = (struct fileNode*)malloc(sizeof(struct fileNode));
+void createDirectoryOrFile(struct FileNode* cwd, int isFolder){
+    struct FileNode* newNode = (struct FileNode*)malloc(sizeof(struct FileNode));
     char FileorDirName[50];
     scanf("%s", FileorDirName);
     strcpy(newNode->name, FileorDirName);
-    struct fileNode* head1 = cwd->child;
-    struct fileNode* temp1 = head1;
+    struct FileNode* head1 = cwd->child;
+    struct FileNode* temp1 = head1;
     if(head1 != NULL){
     do{
         if(strcmp(temp1->name,FileorDirName)==0){
@@ -51,8 +51,8 @@ void createDirectoryOrFile(struct fileNode* cwd, int isFolder){
         newNode->next = newNode;
     } 
     else {
-        struct fileNode* head = cwd->child;
-        struct fileNode* temp = head;
+        struct FileNode* head = cwd->child;
+        struct FileNode* temp = head;
         while(temp->next != head){
             temp = temp->next;
         }
@@ -68,13 +68,13 @@ void createDirectoryOrFile(struct fileNode* cwd, int isFolder){
     }
 }
 
-void writeFile(struct fileNode* cwd, char virtualDisk[NUM_BLOCKS][BLOCK_SIZE], struct freeBlock** freeListHead){
+void writeFile(struct FileNode* cwd, char virtualDisk[NUM_BLOCKS][BLOCK_SIZE], struct FreeBlock** freeListHead){
     char fileName[50];
     scanf(" %s", fileName);
-    struct fileNode* head = cwd->child;
-    struct fileNode* temp = head;
+    struct FileNode* head = cwd->child;
+    struct FileNode* temp = head;
     int blockCount = 0;
-    struct freeBlock* block = *freeListHead;
+    struct FreeBlock* block = *freeListHead;
 
     char data[BLOCK_SIZE];
     while(getchar()!= '"');
@@ -107,11 +107,11 @@ void writeFile(struct fileNode* cwd, char virtualDisk[NUM_BLOCKS][BLOCK_SIZE], s
     printf("File '%s' not found.\n", fileName);
 }
 
-void readFile(struct fileNode* cwd, char virtualDisk[NUM_BLOCKS][BLOCK_SIZE]){
+void readFile(struct FileNode* cwd, char virtualDisk[NUM_BLOCKS][BLOCK_SIZE]){
     char fileName[50];
     scanf(" %s", fileName);
-    struct fileNode* head = cwd->child;
-    struct fileNode* temp = head;
+    struct FileNode* head = cwd->child;
+    struct FileNode* temp = head;
     if(head==NULL){
         printf("No files to read.\n");
         return;
@@ -132,16 +132,16 @@ void readFile(struct fileNode* cwd, char virtualDisk[NUM_BLOCKS][BLOCK_SIZE]){
     printf("File '%s' not found.\n", fileName);
 }
 
-void deleteFile(struct fileNode* cwd, char virtualDisk[NUM_BLOCKS][BLOCK_SIZE], struct freeBlock** freeListTail){
+void deleteFile(struct FileNode* cwd, char virtualDisk[NUM_BLOCKS][BLOCK_SIZE], struct FreeBlock** freeListTail){
     char fileName[50];
     scanf(" %s", fileName);
-    struct fileNode* head = cwd->child;
-    struct fileNode* temp = head;
+    struct FileNode* head = cwd->child;
+    struct FileNode* temp = head;
     do{
         if(strcmp(temp->name, fileName) == 0 && temp->isFolder == 0){
             int blocksToFree = (temp->fileSize + BLOCK_SIZE - 1) / BLOCK_SIZE;
             for(int i = 0; i < blocksToFree; i++){
-                struct freeBlock* newBlock = (struct freeBlock*)malloc(sizeof(struct freeBlock));
+                struct FreeBlock* newBlock = (struct FreeBlock*)malloc(sizeof(struct FreeBlock));
                 newBlock->index = temp->blockPointers[i];
                 newBlock->next = NULL;
                 newBlock->prev = *freeListTail;
@@ -178,11 +178,11 @@ void deleteFile(struct fileNode* cwd, char virtualDisk[NUM_BLOCKS][BLOCK_SIZE], 
     printf("File '%s' not found.\n", fileName);
 }
 
-void removeDirectory(struct fileNode* cwd){
+void removeDirectory(struct FileNode* cwd){
     char dirName[50];
     scanf(" %s", dirName);
-    struct fileNode* head = cwd->child;
-    struct fileNode* temp = head;
+    struct FileNode* head = cwd->child;
+    struct FileNode* temp = head;
     if(head==NULL){
         printf("No directories to remove.\n");
         return;
@@ -223,7 +223,7 @@ void removeDirectory(struct fileNode* cwd){
     printf("Directory '%s' not found.\n", dirName);
 }
 
-void changeDirectory(struct fileNode** cwd){
+void changeDirectory(struct FileNode** cwd){
     char dirName[50];
     scanf(" %s", dirName);
     if(strcmp(dirName, "..") == 0){
@@ -232,8 +232,8 @@ void changeDirectory(struct fileNode** cwd){
         }
         return;
     }
-    struct fileNode* head = (*cwd)->child;
-    struct fileNode* temp = head;
+    struct FileNode* head = (*cwd)->child;
+    struct FileNode* temp = head;
     do{
         if(strcmp(temp->name, dirName) == 0 && temp->isFolder == 1){
             *cwd = temp;
@@ -246,13 +246,13 @@ void changeDirectory(struct fileNode** cwd){
     printf("Directory '%s' not found.\n", dirName);
 }
 
-void printWorkingDirectory(struct fileNode* cwd){
+void printWorkingDirectory(struct FileNode* cwd){
     if(cwd->parent == NULL){
         printf("/\n");
         return;
     }
     char path[500] = "";
-    struct fileNode* temp = cwd;
+    struct FileNode* temp = cwd;
     while(temp != NULL){
         char tempName[50];
         strcpy(tempName, temp->name);
@@ -264,9 +264,9 @@ void printWorkingDirectory(struct fileNode* cwd){
     printf("%s\n", path);
 }
 
-void showDiskUsage(struct freeBlock* head){
+void showDiskUsage(struct FreeBlock* head){
     int freeBlocks = 0;
-    struct freeBlock* temp = head;
+    struct FreeBlock* temp = head;
     while(temp != NULL){
         freeBlocks++;
         temp = temp->next;
@@ -275,13 +275,13 @@ void showDiskUsage(struct freeBlock* head){
     float usagePercent = (usedBlocks * 100.0) / NUM_BLOCKS;
     printf("Total Blocks: %d\nUsed Blocks: %d\nFree Blocks: %d\nDisk Usage: %.2f%%\n", NUM_BLOCKS, usedBlocks, freeBlocks, usagePercent);
 }
-void listDirectory(struct fileNode* cwd){
+void listDirectory(struct FileNode* cwd){
     if(cwd->child == NULL){
         printf("(empty)\n");
         return;
     }
-    struct fileNode* head = cwd->child;
-    struct fileNode* temp = head;
+    struct FileNode* head = cwd->child;
+    struct FileNode* temp = head;
     do {
         printf("%s/ \n", temp->name);
         temp = temp->next;
@@ -289,23 +289,23 @@ void listDirectory(struct fileNode* cwd){
     printf("\n");
 }
 
-void freeDiskAndList(struct freeBlock* head, struct fileNode* root){
-    struct freeBlock* tempBlock = head;
+void freeDiskAndList(struct FreeBlock* head, struct FileNode* root){
+    struct FreeBlock* tempBlock = head;
     while(tempBlock != NULL){
-        struct freeBlock* nextBlock = tempBlock->next;
+        struct FreeBlock* nextBlock = tempBlock->next;
         free(tempBlock);
         tempBlock = nextBlock;
     }
 
-    void freeFileNodes(struct fileNode* node){
+    void freeFileNodes(struct FileNode* node){
         if(node == NULL) {
             return;
         }
-        struct fileNode* head = node->child;
+        struct FileNode* head = node->child;
         if(head != NULL){
-            struct fileNode* temp = head;
+            struct FileNode* temp = head;
             do{
-                struct fileNode* nextNode = temp->next;
+                struct FileNode* nextNode = temp->next;
                 freeFileNodes(temp);
                 temp = nextNode;
             }while(temp != head);
@@ -318,16 +318,16 @@ void freeDiskAndList(struct freeBlock* head, struct fileNode* root){
 int main(){
     char virtualDisk[NUM_BLOCKS][BLOCK_SIZE];
 
-    struct fileNode* root = (struct fileNode*)malloc(sizeof(struct fileNode));
+    struct FileNode* root = (struct FileNode*)malloc(sizeof(struct FileNode));
     strcpy(root->name, "/");
     root->isFolder = 1;
     root->parent = NULL;
     root->child = NULL;
-    struct fileNode* cwd = root;
+    struct FileNode* cwd = root;
 
-    struct freeBlock* head = NULL;
+    struct FreeBlock* head = NULL;
     for(int index = NUM_BLOCKS - 1; index >= 0; index--){
-        struct freeBlock* newBlock = (struct freeBlock*)malloc(sizeof(struct freeBlock));
+        struct FreeBlock* newBlock = (struct FreeBlock*)malloc(sizeof(struct FreeBlock));
         newBlock->index = index;
         newBlock->next = head;
         newBlock->prev = NULL;
@@ -337,7 +337,7 @@ int main(){
         head = newBlock;
     }
 
-    struct freeBlock* tail = head;
+    struct FreeBlock* tail = head;
     while(tail->next != NULL){
         tail = tail->next;
     }
