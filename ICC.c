@@ -3,14 +3,17 @@
 #include<stdlib.h>
 #include "Players_data.h"
 
+#define MAX_TEAMS 10
 #define MAX_PLAYERS 50
 #define MIN_PLAYERS 11
+
+enum Role {Batsman=1,Bowler,AllRounder};
 
 struct Players{
     int playerId;
     char playerName[50];
     char teamName[50];
-    int role;
+    enum Role role;
     int totalRuns;
     float battingAverage;
     float strikeRate;
@@ -34,11 +37,11 @@ struct Teams{
     struct PlayerNode *bowlers;
     struct PlayerNode *allRounders;
 };
-struct Teams teamList[10];
+struct Teams teamList[MAX_TEAMS];
 
 int isCorrectPID(int pid){
-    if(pid <= 0){
-        printf("Player ID must be a positive integer.\n");
+    if(pid < 1 || pid > 1000){
+        printf("Player ID must be in range 1 to 1000.\n");
         return 0;
     }
     for(int i=0;i< playerCount;i++){
@@ -50,13 +53,13 @@ int isCorrectPID(int pid){
     return 1;
 }
 
-float calculatePerformanceIndex(int role, float battingAverage, float strikeRate, int wickets, float economyRate){
+float calculatePerformanceIndex(enum Role role, float battingAverage, float strikeRate, int wickets, float economyRate){
     float performanceIndex = 0.0;
-    if(role == 1){
-        performanceIndex = (battingAverage * 0.6) + (strikeRate * 0.4);
-    }else if(role == 2){
+    if(role == Batsman){
+        performanceIndex = (battingAverage * strikeRate )/100;  
+    }else if(role == Bowler){
         performanceIndex = (wickets * 2.0) - (100-economyRate);
-    }else if(role == 3){
+    }else if(role == AllRounder){
         performanceIndex = ((battingAverage*strikeRate)/100) + (wickets * 2.0);
     }
     return performanceIndex;
@@ -116,7 +119,7 @@ void loadData(){
                 float oldStrike = teamList[j].averageBattingStrikeRate * teamList[j].totalPlayers;
 
                 teamList[j].totalPlayers += 1;
-                if(newPlayer->role == 1 || newPlayer->role ==3){
+                if(newPlayer->role == Batsman || newPlayer->role == AllRounder){
                     teamList[j].averageBattingStrikeRate = (oldStrike + newPlayer->strikeRate)/teamList[j].totalPlayers;
                     
                 }
@@ -126,11 +129,11 @@ void loadData(){
                 newNode->player = newPlayer;
                 newNode->next = NULL;
                 
-                if(newPlayer->role == 1){
+                if(newPlayer->role == Batsman){
                     insertSorted(&teamList[j].batsmen, newNode);
-                }else if(newPlayer->role == 2){
+                }else if(newPlayer->role == Bowler){
                     insertSorted(&teamList[j].bowlers, newNode);
-                }else{
+                }else if(newPlayer->role == AllRounder){
                     insertSorted(&teamList[j].allRounders, newNode);
                 }
                 break;
@@ -190,18 +193,18 @@ void addPlayerToTeam(){
             float oldStrike = teamList[i].averageBattingStrikeRate * teamList[i].totalPlayers;
 
             teamList[i].totalPlayers += 1;
-            if(newPlayer->role == 1 || newPlayer->role ==3){
+            if(newPlayer->role == Batsman || newPlayer->role == AllRounder){
                 teamList[i].averageBattingStrikeRate = (oldStrike + newPlayer->strikeRate)/teamList[i].totalPlayers;
                     
             }
             struct PlayerNode *newNode = (struct PlayerNode*)malloc(sizeof(struct PlayerNode));
             newNode->player = newPlayer;
             newNode->next = NULL;
-            if(newPlayer->role == 1){
+            if(newPlayer->role == Batsman){
                 insertSorted(&teamList[i].batsmen, newNode);
-            }else if(newPlayer->role == 2){
+            }else if(newPlayer->role == Bowler){
                 insertSorted(&teamList[i].bowlers, newNode);
-            }else{
+            }else if(newPlayer->role == AllRounder){
                 insertSorted(&teamList[i].allRounders, newNode);
             }
             printf("Player added successfully to Team %s\n", teamList[i].teamName);
@@ -213,6 +216,22 @@ void addPlayerToTeam(){
             high = mid - 1;
         }
     }
+}
+
+void displayPlayerByRole(struct PlayerNode *temp){
+    while(temp != NULL){
+        if(temp->player->role == Batsman){
+            printf("%d\t%-25sBatsman\t%d\t%.2f\t%.2f\t%d\t%.2f\t%.2f\n", temp->player->playerId, temp->player->playerName, temp->player->totalRuns, temp->player->battingAverage, temp->player->strikeRate, temp->player->wickets, temp->player->economyRate, temp->player->performanceIndex);
+        }
+        else if(temp->player->role == Bowler){
+            printf("%d\t%-25sBowler \t%d\t%.2f\t%.2f\t%d\t%.2f\t%.2f\n", temp->player->playerId, temp->player->playerName, temp->player->totalRuns, temp->player->battingAverage, temp->player->strikeRate, temp->player->wickets, temp->player->economyRate, temp->player->performanceIndex);
+        }
+        else{
+            printf("%d\t%-25sAll-Rounder\t%d\t%.2f\t%.2f\t%d\t%.2f\t%.2f\n", temp->player->playerId, temp->player->playerName, temp->player->totalRuns, temp->player->battingAverage, temp->player->strikeRate, temp->player->wickets, temp->player->economyRate, temp->player->performanceIndex);
+        }
+        temp = temp->next;
+    }
+
 }
 
 void displayPlayersOfTeam(){
@@ -232,21 +251,9 @@ void displayPlayersOfTeam(){
             printf("=============================================================================================\n");
             printf("ID\t%-25sRole\t\tRuns\tAvg\tSR\tWkts\tER\tPerf.Index\n", "Name");
             printf("=============================================================================================\n");
-            struct PlayerNode *temp = teamList[i].batsmen;
-            while(temp != NULL){
-                printf("%d\t%-25sBatsman\t%d\t%.2f\t%.2f\t%d\t%.2f\t%.2f\n", temp->player->playerId, temp->player->playerName, temp->player->totalRuns, temp->player->battingAverage, temp->player->strikeRate, temp->player->wickets, temp->player->economyRate, temp->player->performanceIndex);
-                temp = temp->next;
-            }
-            temp = teamList[i].bowlers;
-            while(temp != NULL){
-                printf("%d\t%-25sBowler \t%d\t%.2f\t%.2f\t%d\t%.2f\t%.2f\n", temp->player->playerId, temp->player->playerName, temp->player->totalRuns, temp->player->battingAverage, temp->player->strikeRate, temp->player->wickets, temp->player->economyRate, temp->player->performanceIndex);
-                temp = temp->next;
-            }
-            temp = teamList[i].allRounders;
-            while(temp != NULL){
-                printf("%d\t%-25sAll-Rounder\t%d\t%.2f\t%.2f\t%d\t%.2f\t%.2f\n", temp->player->playerId, temp->player->playerName, temp->player->totalRuns, temp->player->battingAverage, temp->player->strikeRate, temp->player->wickets, temp->player->economyRate, temp->player->performanceIndex);
-                temp = temp->next;
-            }
+            displayPlayerByRole(teamList[i].batsmen);
+            displayPlayerByRole(teamList[i].bowlers);   
+            displayPlayerByRole(teamList[i].allRounders);
             printf("=============================================================================================\n");
             printf("Total Players: %d\n", teamList[i].totalPlayers);
             printf("Average Batting Strike Rate: %.2f\n", teamList[i].averageBattingStrikeRate);
