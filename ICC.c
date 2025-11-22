@@ -44,10 +44,30 @@ int isCorrectPID(int pid){
         printf("Player ID must be in range 1 to 1000.\n");
         return 0;
     }
-    for(int i=0;i< playerCount;i++){
-        if(players[i].id == pid){
-            printf("Player ID %d already exists. Cannot add duplicate Player ID.\n", pid);
-            return 0;
+    for(int i=0;i< teamCount;i++){
+        struct PlayerNode *bat=teamList[i].batsmen;
+        while(bat != NULL){
+            if(bat->player->playerId == pid){
+                printf("Player ID %d already exists. Cannot add duplicate Player ID.\n", pid);
+                return 0;
+            }
+            bat = bat->next;
+        }
+        struct PlayerNode *bowl=teamList[i].bowlers;
+        while(bowl != NULL){
+            if(bowl->player->playerId == pid){
+                printf("Player ID %d already exists. Cannot add duplicate Player ID.\n", pid);
+                return 0;
+            }
+            bowl = bowl->next;
+        }
+        struct PlayerNode *allRounder=teamList[i].allRounders;
+        while(allRounder != NULL){
+            if(allRounder->player->playerId == pid){
+                printf("Player ID %d already exists. Cannot add duplicate Player ID.\n", pid);
+                return 0;
+            }
+            allRounder = allRounder->next;
         }
     }
     return 1;
