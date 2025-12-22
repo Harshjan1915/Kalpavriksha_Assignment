@@ -12,15 +12,15 @@
 #define STATE_KILLED 4
 
 struct process {
-  int pid;
-  char name[MAX_NAME];
+  int processId;
+  char processName[MAX_NAME];
 
-  int totalBurst;
-  int remainingBurst;
+  int totalBurstTime;
+  int remainingBurstTime;
 
-  int ioStart;
+  int ioStartTime;
   int ioDuration;
-  int ioRemaining;
+  int ioRemainingTime;
 
   int arrivalTime;
   int completionTime;
@@ -36,84 +36,81 @@ struct queue {
   struct process *rear;
 };
 
-struct queue *readyQ, *waitQ, *termQ;
-
 struct process *hashMap[HASH_SIZE];
 
 struct queue *createQueue() {
-  struct queue *q = malloc(sizeof(struct queue));
-  q->front = q->rear = NULL;
-  return q;
+  struct queue *queue = malloc(sizeof(struct queue));
+  queue->front = queue->rear = NULL;
+  return queue;
 }
-
-void enqueue(struct queue *q, struct process *p) {
-  p->next = NULL;
-  if (!q->rear) {
-    q->front = q->rear = p;
+void enqueue(struct queue *queue, struct process *process) {
+  process->next = NULL;
+  if (!queue->rear) {
+    queue->front = queue->rear = process;
     return;
   }
-  q->rear->next = p;
-  q->rear = p;
+  queue->rear->next = process;
+  queue->rear = process;
 }
 
-struct process *dequeue(struct queue *q) {
-  if (!q->front)
+struct process *dequeue(struct queue *queue) {
+  if (!queue->front)
     return NULL;
-  struct process *temp = q->front;
-  q->front = q->front->next;
-  if (!q->front)
-    q->rear = NULL;
+  struct process *temp = queue->front;
+  queue->front = queue->front->next;
+  if (!queue->front)
+    queue->rear = NULL;
   return temp;
 }
 
-int isEmpty(struct queue *q) { 
-    return q->front == NULL; 
+int isEmpty(struct queue *queue) { 
+    return queue->front == NULL; 
 }
 
-void addToHash(struct process *p) { 
-    hashMap[p->pid] = p; 
+void addToHash(struct process *process) { 
+    hashMap[process->processId] = process; 
 }
 
-struct process *getFromHash(int pid) {
-  if (pid < 0 || pid >= HASH_SIZE)
+struct process *getFromHash(int processId) {
+  if (processId < 0 || processId >= HASH_SIZE)
     return NULL;
-  return hashMap[pid];
+  return hashMap[processId];
 }
 
-void removeFromQueue(struct queue *q, struct process *p) {
-  if (!q->front)
+void removeFromQueue(struct queue *queue, struct process *process) {
+  if (!queue->front)
     return;
 
-  struct process *curr = q->front;
+  struct process *curr = queue->front;
   struct process *prev = NULL;
 
   while (curr) {
-    if (curr == p) {
+    if (curr == process) {
       if (prev == NULL) {
-        q->front = curr->next;
+        queue->front = curr->next;
       } else {
         prev->next = curr->next;
       }
-      if (curr == q->rear)
-        q->rear = prev;
+      if (curr == queue->rear)
+        queue->rear = prev;
       return;
     }
     prev = curr;
     curr = curr->next;
   }
-}
+} 
 
-void createProcess(char *name, int pid, int burst, int ioStart, int ioDur) {
+void createProcess(char *name, int pid, int burst, int ioStart, int ioDuration, struct queue *readyQueue) {
   struct process *p = malloc(sizeof(struct process));
 
-  strcpy(p->name, name);
-  p->pid = pid;
-  p->totalBurst = burst;
-  p->remainingBurst = burst;
+  strcpy(p->processName, name);
+  p->processId = pid;
+  p->totalBurstTime = burst;
+  p->remainingBurstTime = burst;
 
-  p->ioStart = ioStart;
-  p->ioDuration = ioDur;
-  p->ioRemaining = ioDur;
+  p->ioStartTime = ioStart;
+  p->ioDuration = ioDuration;
+  p->ioRemainingTime = ioDuration;
 
   p->arrivalTime = 0;
   p->completionTime = -1;
@@ -124,7 +121,7 @@ void createProcess(char *name, int pid, int burst, int ioStart, int ioDur) {
   p->next = NULL;
 
   addToHash(p);
-  enqueue(readyQ, p);
+  enqueue(readyQueue, p);
 }
 
 void scheduleKill(int pid, int time) {
@@ -137,12 +134,12 @@ void scheduleKill(int pid, int time) {
   printf("Scheduled KILL %d at time %d\n", pid, time);
 }
 
-void runSimulation() {
+void runSimulation(struct queue *readyQueue, struct queue *waitingQueue, struct queue *terminatedQueue) {
   printf("\n--- STARTING SIMULATION ---\n");
   int time = 0;
   struct process *running = NULL;
 
-  while (!isEmpty(readyQ) || !isEmpty(waitQ) || running != NULL) {
+  while (!isEmpty(readyQueue) || !isEmpty(waitingQueue) || running != NULL) {
 
     for (int pid = 0; pid < HASH_SIZE; pid++) {
       struct process *p = hashMap[pid];
@@ -150,25 +147,25 @@ void runSimulation() {
         continue;
 
       if (p->killAt == time && p->state != STATE_TERMINATED) {
-        printf("KILLED Process %d at time %d\n", p->pid, time);
+        printf("KILLED Process %d at time %d\n", p->processId, time);
 
         if (running == p)
           running = NULL;
 
-        removeFromQueue(readyQ, p);
-        removeFromQueue(waitQ, p);
+        removeFromQueue(readyQueue, p);
+        removeFromQueue(waitingQueue, p);
 
         p->state = STATE_KILLED;
         p->completionTime = time;
-        enqueue(termQ, p);
+        enqueue(terminatedQueue, p);
       }
     }
 
     int count = 0;
     struct process *tempList[500];
 
-    while (!isEmpty(waitQ)) {
-      tempList[count++] = dequeue(waitQ);
+    while (!isEmpty(waitingQueue)) {
+      tempList[count++] = dequeue(waitingQueue);
     }
 
     for (int i = 0; i < count; i++) {
@@ -177,39 +174,39 @@ void runSimulation() {
       if (p->state == STATE_KILLED)
         continue;
 
-      p->ioRemaining--;
+      p->ioRemainingTime--;
 
-      if (p->ioRemaining == 0) {
+      if (p->ioRemainingTime == 0) {
         p->state = STATE_READY;
-        enqueue(readyQ, p);
-        p->ioRemaining = p->ioDuration;
+        enqueue(readyQueue, p);
+        p->ioRemainingTime = p->ioDuration;
       } else {
-        enqueue(waitQ, p);
+        enqueue(waitingQueue, p);
       }
     }
 
     if (!running) {
-      running = dequeue(readyQ);
+      running = dequeue(readyQueue);
       if (running)
         running->state = STATE_RUNNING;
     }
 
     if (running) {
-      running->remainingBurst--;
+      running->remainingBurstTime--;
 
-      int executed = running->totalBurst - running->remainingBurst;
+      int executed = running->totalBurstTime - running->remainingBurstTime;
 
-      if (running->ioDuration > 0 && executed == running->ioStart) {
+      if (running->ioDuration > 0 && executed == running->ioStartTime) {
 
         running->state = STATE_WAITING;
-        enqueue(waitQ, running);
+        enqueue(waitingQueue, running);
         running = NULL;
       }
 
-      else if (running->remainingBurst == 0) {
+      else if (running->remainingBurstTime == 0) {
         running->state = STATE_TERMINATED;
         running->completionTime = time + 1;
-        enqueue(termQ, running);
+        enqueue(terminatedQueue, running);
         running = NULL;
       }
     }
@@ -222,30 +219,31 @@ void runSimulation() {
   printf("%-5s %-10s %-5s %-5s %-12s %-10s\n", "PID", "Name", "CPU", "IO",
          "Turnaround", "Waiting");
 
-  while (!isEmpty(termQ)) {
-    struct process *p = dequeue(termQ);
+  while (!isEmpty(terminatedQueue)) {
+    struct process *p = dequeue(terminatedQueue);
 
     if (p->state == STATE_KILLED) {
-      printf("%-5d %-10s %-5d %-5d %-12s %-10s\n", p->pid, p->name,
-             p->totalBurst, p->ioDuration, "-", "-");
+      printf("%-5d %-10s %-5d %-5d %-12s %-10s\n", p->processId, p->processName,
+             p->totalBurstTime, p->ioDuration, "-", "-");
       continue;
     }
 
     int turnaround = p->completionTime - p->arrivalTime;
-    int waiting = turnaround - p->totalBurst - p->ioDuration;
+    int waiting = turnaround - p->totalBurstTime - p->ioDuration;
 
-    printf("%-5d %-10s %-5d %-5d %-12d %-10d\n", p->pid, p->name, p->totalBurst,
-           p->ioDuration, turnaround, waiting);
+    printf("%-5d %-10s %-5d %-5d %-12d %-10d\n", p->processId, p->processName,
+           p->totalBurstTime, p->ioDuration, turnaround, waiting);
   }
 }
 
 int main() {
   char input[200], name[100];
-  int pid, cpu, ioS, ioD, killT;
+  int processId, cpu, ioS, ioD, killTime;
+  struct queue *readyQueue, *waitingQueue, *terminatedQueue;
 
-  readyQ = createQueue();
-  waitQ = createQueue();
-  termQ = createQueue();
+  readyQueue = createQueue();
+  waitingQueue = createQueue();
+  terminatedQueue = createQueue();
 
   printf("<name> <pid> <cpu> <io_start> <io_duration>\n");
   printf("KILL <pid> <time>\n");
@@ -257,17 +255,17 @@ int main() {
     input[strcspn(input, "\n")] = '\0';
 
     if (strcmp(input, "RUN") == 0) {
-      runSimulation();
+      runSimulation(readyQueue, waitingQueue, terminatedQueue);
       break;
     }
 
-    if (sscanf(input, "KILL %d %d", &pid, &killT) == 2) {
-      scheduleKill(pid, killT);
+    if (sscanf(input, "KILL %d %d", &processId, &killTime) == 2) {
+      scheduleKill(processId, killTime);
       continue;
     }
 
-    if (sscanf(input, "%s %d %d %d %d", name, &pid, &cpu, &ioS, &ioD) == 5) {
-      createProcess(name, pid, cpu, ioS, ioD);
+    if (sscanf(input, "%s %d %d %d %d", name, &processId, &cpu, &ioS, &ioD) == 5) {
+      createProcess(name, processId, cpu, ioS, ioD, readyQueue);
       continue;
     }
 
