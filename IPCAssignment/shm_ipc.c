@@ -1,55 +1,84 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<unistd.h>
-#include<sys/shm.h>
-#include<sys/ipc.h>
-#include<sys/wait.h>
-#include<sys/types.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
-int cmp(const void *a, const void *b) {
-    return (*(int *)a - *(int *)b);
+
+int compareIntegers(const void *firstElement, const void *secondElement) {
+  return (*(int *)firstElement - *(int *)secondElement);
 }
 
-int main(){
-    key_t key;
-    int shmID;
-    int* shm;
-    int n;
-    scanf("%d",&n);
+void printArray(int *numbers, int arraySize) {
+  for (int i = 0; i < arraySize; i++) {
+    printf("%d\t", numbers[i]);
+  }
+  printf("\n");
+}
 
-    key = ftok("data",77);
+void executeChildProcess(int *sharedMemory, int arraySize) {
+  qsort(sharedMemory, arraySize, sizeof(int), compareIntegers);
+  if (shmdt(sharedMemory) == -1) {
+    perror("shmdt child failed");
+  }
+  exit(0);
+}
 
-    shmID = shmget(key , sizeof(int)*n , 0666 | IPC_CREAT);
+void executeParentProcess(int *sharedMemory, int arraySize) {
+  wait(NULL);
+  printf("After sorting:\n");
+  printArray(sharedMemory, arraySize);
 
-    shm = (int *)shmat(shmID , NULL , 0);
+  if (shmdt(sharedMemory) == -1) {
+    perror("shmdt parent failed");
+  }
+}
 
-    for(int i = 0 ; i < n ; i++){
-        scanf("%d",&shm[i]);
-    }
+int main() {
+  key_t key;
+  int sharedMemoryId;
+  int *sharedMemory;
+  int arraySize;
 
-    printf("before sorting:\n");
-    for(int i = 0 ; i < n ; i++){
-        printf("%d\t",shm[i]);
-    }
+  if (scanf("%d", &arraySize) != 1)
+    return 1;
 
-    printf("\n");
-    int id = fork();
+  key = ftok("data", 77);
+  if (key == -1) {
+    perror("ftok failed");
+  }
 
-    if( id == 0 ){
+  sharedMemoryId = shmget(key, sizeof(int) * arraySize, 0666 | IPC_CREAT);
+  if (sharedMemoryId == -1) {
+    perror("shmget failed");
+    return 1;
+  }
 
-        qsort(shm , n ,sizeof(int) ,cmp);
-        shmdt(shm);
+  sharedMemory = (int *)shmat(sharedMemoryId, NULL, 0);
+  if (sharedMemory == (void *)-1) {
+    perror("shmat failed");
+    return 1;
+  }
 
-    }else{
+  for (int i = 0; i < arraySize; i++) {
+    scanf("%d", &sharedMemory[i]);
+  }
 
-        wait(NULL);
+  printf("Before sorting:\n");
+  printArray(sharedMemory, arraySize);
 
-        printf("After sorting:\n");
-        for(int i = 0 ; i < n ; i++){
-            printf("%d\t",shm[i]);
-        }
-        printf("\n");
-        shmdt(shm);
-    }
-    return 0;
+  int processId = fork();
+
+  if (processId < 0) {
+    perror("Fork failed");
+    return 1;
+  } else if (processId == 0) {
+    executeChildProcess(sharedMemory, arraySize);
+  } else {
+    executeParentProcess(sharedMemory, arraySize);
+    shmctl(sharedMemoryId, IPC_RMID, NULL);
+  }
+  return 0;
 }

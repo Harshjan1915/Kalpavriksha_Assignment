@@ -1,56 +1,86 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<unistd.h>
-#include<sys/types.h>
-#include<sys/wait.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
-int cmp(const void *a, const void *b) {
-    return (*(int *)a - *(int *)b);
+
+int compareIntegers(const void *firstElement, const void *secondElement) {
+  return (*(int *)firstElement - *(int *)secondElement);
 }
 
-int main(){
-    int n;
-    scanf("%d",&n);
-    int arr[n];
+void printArray(int *numbers, int arraySize) {
+  for (int i = 0; i < arraySize; i++) {
+    printf("%d\t", numbers[i]);
+  }
+  printf("\n");
+}
 
-    int fd[2];
-    if(pipe(fd) != 0){
-        printf("creating pipe fails\n");
-        return 1;
-    }
-    for(int i = 0 ; i < n ; i++){
-        scanf("%d",&arr[i]);
-    }
+void executeChildProcess(int *pipeFileDescriptors, int *numbers,int arraySize) {
+  if (read(pipeFileDescriptors[0], numbers, sizeof(int) * arraySize) == -1) {
+    perror("Child read failed");
+    exit(1);
+  }
+  close(pipeFileDescriptors[0]);
 
-    printf("before sorting:\n");
-    for(int i = 0 ; i < n ; i++){
-        printf("%d\t",arr[i]);
-    }
+  qsort(numbers, arraySize, sizeof(int), compareIntegers);
 
-    printf("\n");
+  if (write(pipeFileDescriptors[1], numbers, sizeof(int) * arraySize) == -1) {
+    perror("Child write failed");
+    exit(1);
+  }
+  close(pipeFileDescriptors[1]);
+  exit(0);
+}
 
-    int id = fork();
+void executeParentProcess(int *pipeFileDescriptors, int *numbers,int arraySize) {
+  if (write(pipeFileDescriptors[1], numbers, sizeof(int) * arraySize) == -1) {
+    perror("Parent write failed");
+    exit(1);
+  }
+  close(pipeFileDescriptors[1]);
 
-    if( id == 0 ){
-        read(fd[0] , arr , sizeof(int) *n);
-        close(fd[0]);
-        qsort(arr , n ,sizeof(int) ,cmp);
-        write(fd[1] , arr , sizeof(int) * n);
-        close(fd[1]);
-    }else{
+  wait(NULL);
 
-        write(fd[1] , arr, sizeof(int)*n);
-        close(fd[1]);
-        wait(NULL);
+  if (read(pipeFileDescriptors[0], numbers, sizeof(int) * arraySize) == -1) {
+    perror("Parent read failed");
+    exit(1);
+  }
+  close(pipeFileDescriptors[0]);
 
-        read(fd[0] , arr , sizeof(int)*n);
-        close(fd[0]);
+  printf("After sorting:\n");
+  printArray(numbers, arraySize);
+}
 
-        printf("After sorting:\n");
-        for(int i = 0 ; i < n ; i++){
-            printf("%d\t",arr[i]);
-        }
-        printf("\n");
-    }
-    return 0;
+int main() {
+  int arraySize;
+  if (scanf("%d", &arraySize) != 1)
+    return 1;
+
+  int numbers[arraySize];
+
+  int pipeFileDescriptors[2];
+  if (pipe(pipeFileDescriptors) != 0) {
+    printf("Creating pipe failed\n");
+    return 1;
+  }
+
+  for (int i = 0; i < arraySize; i++) {
+    scanf("%d", &numbers[i]);
+  }
+
+  printf("Before sorting:\n");
+  printArray(numbers, arraySize);
+
+  int processId = fork();
+
+  if (processId < 0) {
+    perror("Fork failed");
+    return 1;
+  } else if (processId == 0) {
+    executeChildProcess(pipeFileDescriptors, numbers, arraySize);
+  } else {
+    executeParentProcess(pipeFileDescriptors, numbers, arraySize);
+  }
+  return 0;
 }

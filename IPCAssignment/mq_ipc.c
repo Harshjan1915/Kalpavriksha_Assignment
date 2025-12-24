@@ -1,66 +1,110 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<unistd.h>
-#include<sys/msg.h>
-#include<sys/ipc.h>
-#include<sys/wait.h>
-#include<sys/types.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
-#define MAX 100
 
-struct message {
-    long mtype;       
-    int n;             
-    int arr[MAX];     
+#define MAX_ARRAY_SIZE 100
+
+struct Message {
+  long messageType;
+  int arraySize;
+  int numbers[MAX_ARRAY_SIZE];
 };
 
-int cmp(const void *a, const void *b) {
-    return (*(int *)a - *(int *)b);
+int compareIntegers(const void *firstElement, const void *secondElement) {
+  return (*(int *)firstElement - *(int *)secondElement);
 }
 
-int main(){
-    key_t key;
-    int msgID;
-    struct message msg;
-    scanf("%d",&msg.n);
+void printMessageArray(struct Message *message) {
+  for (int i = 0; i < message->arraySize; i++) {
+    printf("%d\t", message->numbers[i]);
+  }
+  printf("\n");
+}
 
-    key = ftok("data",77);
+void sendMessage(int messageQueueId, struct Message *message) {
+  if (msgsnd(messageQueueId, message, sizeof(*message) - sizeof(long), 0) ==
+      -1) {
+    perror("Error sending message");
+    exit(1);
+  }
+}
 
-    msgID = msgget(key , 0666 | IPC_CREAT);
+void receiveMessage(int messageQueueId, struct Message *message, long type) {
+  if (msgrcv(messageQueueId, message, sizeof(*message) - sizeof(long), type,
+             0) == -1) {
+    perror("Error receiving message");
+    exit(1);
+  }
+}
 
-    for(int i = 0 ; i < msg.n ; i++){
-        scanf("%d",&msg.arr[i]);
-    }
+void executeChildProcess(int messageQueueId) {
+  struct Message message;
 
-    printf("before sorting:\n");
-    for(int i = 0 ; i < msg.n ; i++){
-        printf("%d\t",msg.arr[i]);
-    }
-    printf("\n");
+  receiveMessage(messageQueueId, &message, 1);
 
-    int id = fork();
+  qsort(message.numbers, message.arraySize, sizeof(int), compareIntegers);
 
-    if( id == 0 ){
+  message.messageType = 2;
+  sendMessage(messageQueueId, &message);
 
-        msgrcv(msgID , &msg , sizeof(msg) - sizeof(long) ,1 , 0);
-        qsort( msg.arr , msg.n ,sizeof(int) ,cmp);
-        msg.mtype=2;
-        msgsnd(msgID , &msg , sizeof(msg) - sizeof(long) , 0);
-        exit(0);
+  exit(0);
+}
 
-    }else{
+void executeParentProcess(int messageQueueId, struct Message *message) {
+  message->messageType = 1;
+  sendMessage(messageQueueId, message);
 
-        msg.mtype=1;
-        msgsnd(msgID , &msg , sizeof(msg) - sizeof(long)  , 0);
-        wait(NULL);
+  wait(NULL);
+  receiveMessage(messageQueueId, message, 2);
 
-        msgrcv(msgID , &msg , sizeof(msg) - sizeof(long) ,2 , 0);
-        printf("After sorting:\n");
-        for(int i = 0 ; i < msg.n ; i++){
-            printf("%d\t",msg.arr[i]);
-        }
-        printf("\n");
-        msgctl(msgID , IPC_RMID , NULL);
-    }
-    return 0;
+  printf("After sorting:\n");
+  printMessageArray(message);
+
+  msgctl(messageQueueId, IPC_RMID, NULL);
+}
+
+int main() {
+  key_t key;
+  int messageQueueId;
+  struct Message message;
+
+  if (scanf("%d", &message.arraySize) != 1) {
+    fprintf(stderr, "Error reading size\n");
+    return 1;
+  }
+
+  key = ftok("data", 77);
+  if (key == -1) {
+    perror("ftok failed");
+  }
+
+  messageQueueId = msgget(key, 0666 | IPC_CREAT);
+  if (messageQueueId == -1) {
+    perror("msgget failed");
+    return 1;
+  }
+
+  for (int i = 0; i < message.arraySize; i++) {
+    scanf("%d", &message.numbers[i]);
+  }
+
+  printf("Before sorting:\n");
+  printMessageArray(&message);
+
+  int processId = fork();
+
+  if (processId < 0) {
+    perror("Fork failed");
+    return 1;
+  } else if (processId == 0) {
+    executeChildProcess(messageQueueId);
+  } else {
+    executeParentProcess(messageQueueId, &message);
+  }
+  return 0;
 }

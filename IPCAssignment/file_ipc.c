@@ -1,66 +1,98 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<unistd.h>
-#include<sys/types.h>
-#include<sys/wait.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <windows.h>
 
-int cmp(const void *a, const void *b) {
-    return (*(int *)a - *(int *)b);
+
+int compareIntegers(const void *firstElement, const void *secondElement) {
+  return (*(int *)firstElement - *(int *)secondElement);
+}
+void readInputArray(int *numbers, int arraySize) {
+  for (int i = 0; i < arraySize; i++) {
+    scanf("%d", &numbers[i]);
+  }
 }
 
-int main(){
-    int n;
-    scanf("%d",&n);
-    int arr[n];
+void printArray(int *numbers, int arraySize) {
+  for (int i = 0; i < arraySize; i++) {
+    printf("%d\t", numbers[i]);
+  }
+  printf("\n");
+}
 
-    for(int i = 0 ; i < n ; i++){
-        scanf("%d",&arr[i]);
-    }
+void writeArrayToFile(const char *filename, int *numbers, int arraySize) {
+  FILE *dataFile = fopen(filename, "w");
+  if (dataFile == NULL) {
+    perror("Error opening file for writing");
+    exit(1);
+  }
+  fwrite(numbers, sizeof(int), arraySize, dataFile);
+  fclose(dataFile);
+}
 
-    printf("before sorting:\n");
-    for(int i = 0 ; i < n ; i++){
-        printf("%d\t",arr[i]);
-    }
-    printf("\n");
+void readArrayFromFile(const char *filename, int *numbers, int arraySize) {
+  FILE *dataFile = fopen(filename, "r");
+  if (dataFile == NULL) {
+    perror("Error opening file for reading");
+    exit(1);
+  }
+  fread(numbers, sizeof(int), arraySize, dataFile);
+  fclose(dataFile);
+}
 
-    int id = fork();
+void executeChildProcess(const char *filename, int arraySize) {
+  int *numbers = (int *)malloc(arraySize * sizeof(int));
+  if (numbers == NULL) {
+    perror("Malloc failed");
+    exit(1);
+  }
 
-    if( id == 0 ){
-        FILE* fp = fopen("data.txt" , "r");
-        fread(arr , sizeof(int) , n , fp);
-        fclose(fp);
+  readArrayFromFile(filename, numbers, arraySize);
 
-        qsort(arr , n ,sizeof(int) ,cmp);
+  qsort(numbers, arraySize, sizeof(int), compareIntegers);
 
-        fp=fopen("data.txt","w");
-        if(fp==NULL){
-            printf("error in opening file.\n");
-            exit(1);
-        }
-        fwrite(arr , sizeof(int) ,n ,fp);
-        fclose(fp);
-        fclose(fp);
+  writeArrayToFile(filename, numbers, arraySize);
 
-    }else{
+  free(numbers);
+}
 
-        FILE* fp=fopen("data.txt","w");
-        if(fp==NULL){
-            printf("error in opening file.\n");
-            exit(1);
-        }
-        fwrite(arr , sizeof(int) ,n ,fp);
-        fclose(fp);
+void executeParentProcess(const char *filename, int *numbers, int arraySize) {
+  writeArrayToFile(filename, numbers, arraySize);
 
-        wait(NULL);
+  wait(NULL);
 
-        fp=fopen("data.txt","r");
-        fread(arr , sizeof(int) , n , fp);
+  readArrayFromFile(filename, numbers, arraySize);
 
-        fclose(fp);
-        printf("after sorting:\n");
-        for(int i = 0 ; i < n ; i++){
-            printf("%d\t",arr[i]);
-        }
-    }
-    return 0;
+  printf("After sorting:\n");
+  printArray(numbers, arraySize);
+}
+
+int main() {
+  int arraySize;
+  if (scanf("%d", &arraySize) != 1) {
+    fprintf(stderr, "Error reading array size\n");
+    return 1;
+  }
+
+  int numbers[arraySize];
+
+  readInputArray(numbers, arraySize);
+
+  printf("Before sorting:\n");
+  printArray(numbers, arraySize);
+
+  int processId = fork();
+
+  if (processId < 0) {
+    perror("Fork failed");
+    return 1;
+  } else if (processId == 0) {
+    Sleep(1);
+    executeChildProcess("data.txt", arraySize);
+  } else {
+    executeParentProcess("data.txt", numbers, arraySize);
+  }
+  return 0;
 }
